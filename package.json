@@ -4,8 +4,14 @@
   "description": "Maps for mams",
   "main": "index.js",
   "scripts": {
+    "start": "node index.js",
     "test": "mocha --recursive"
   },
   "author": "Tiddo Langerak <tiddolangerak@gmail.com>",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "express": "~3.3.7",
+    "phantomjs": "~1.9.1-8",
+    "uuid": "~1.4.1"
+  }
 }
