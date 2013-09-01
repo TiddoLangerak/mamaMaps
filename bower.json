@@ -1,0 +1,9 @@
+{
+  "name": "mamaMaps",
+  "version": "0.0.0",
+  "authors": [
+    "Tiddo Langerak <tiddolangerak@gmail.com>"
+  ],
+  "license": "MIT",
+  "private": true
+}

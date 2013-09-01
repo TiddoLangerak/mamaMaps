@@ -1,0 +1,11 @@
+{
+  "name": "mamaMaps",
+  "version": "0.0.0",
+  "description": "Maps for mams",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha --recursive"
+  },
+  "author": "Tiddo Langerak <tiddolangerak@gmail.com>",
+  "license": "MIT"
+}
