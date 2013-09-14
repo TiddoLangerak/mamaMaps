@@ -1,15 +1,35 @@
 var express = require("express");
 var path = require("path");
 var uuid = require("uuid");
-var childProcess = require("child_process");
 var fs = require("fs");
 var url = require("url");
+var phantom = require("phantom");
+var debug = require("debug");
+var log = debug("MamasMaps:log");
+var plog = debug("MamasMaps:phantom");
+
+var emptyFunc = function(){};
+
+
+var getPort = (function() {
+	var	min = 12345;
+	var max = 22345;
+	var current = 12345;
+	return function getPort() {
+		if (current >= max) {
+			current = min;
+		}
+		return current++;
+	}
+}());
+
+
+
 
 
 //Lifetime of the images, 30 minutes
 var fileLifetime = 1000 * 60 * 30;
-//path to phantomjs executable
-var phantomjsPath = require("phantomjs").path;
+
 //port to listen on
 var port = process.env.PORT || 8080;
 //Paths to files and stuff
@@ -17,7 +37,7 @@ var clientPath = path.join(__dirname, "../client");
 var mapPath = path.join(clientPath, "maps");
 
 //cleanup files
-console.log("deleting old files...");
+log("deleting old files...");
 var files = fs.readdirSync(mapPath);
 for (var i = 0; i < files.length; i++) {
 	fs.unlinkSync(path.join(mapPath, files[i]));
@@ -78,8 +98,55 @@ app.post("/generateMap", function(req, res) {
 		path : filePath,
 		q : req.body.quality
 	};
-	console.log(opts);
+	log(JSON.stringify(opts));
 
+
+	phantom.create({port : getPort() },function (handle) {
+		plog("Created new phantom insance");
+		handle.createPage(function (page) {
+			page.set("viewportSize", opts.resolution);
+			plog("Opening " + opts.url);
+			page.open(opts.url, function(status) {
+				plog("Opened " + opts.url);
+				plog("Status: " + status);
+				if (status !== "success") {
+					res.send("Oops, er is iets misgegaan. Probeer het later opnieuw.");
+					handle.exit();
+					return;
+				}
+
+				page.set("clipRect", {
+						top:    102,
+						left:   382,
+						width:  opts.resolution.width-382,
+						height: opts.resolution.height-102
+				});
+				plog("Writing screenshot to " + opts.path);
+				var interval = setInterval(function() {
+					page.evaluate(function() {
+						return document.getElementById("loadmessagehtml").style.display;
+					}, function(display) {
+						if (display === "none") { 
+							clearInterval(interval);
+							page.render(opts.path, function() {
+								plog("Written to" + opts.path + " successfully");
+								res.header("Location", "maps/" + fileName);
+								res.send(303);
+								setTimeout(fs.unlink, fileLifetime, opts.path, emptyFunc);
+								handle.exit();
+							});
+						}
+					});
+				}, 250);
+				
+
+			});
+		});
+
+	});
+
+
+/*
 	var phantomArgs = [
 		path.join(__dirname, "mapGenerator.js"),
 		JSON.stringify(opts)
@@ -92,15 +159,16 @@ app.post("/generateMap", function(req, res) {
 
 		res.header("Location", "maps/" + fileName);
 		res.send(303);
-		console.log(stdout);
-		console.log(stderr);
+		log(stdout);
+		log(stderr);
 
 		setTimeout(fs.unlink, fileLifetime, opts.path, function(){});
 
 	});
+	*/
 
 
 });
 
-console.log("Starting server on port " + port);
+log("Starting server on port " + port);
 app.listen(port);
